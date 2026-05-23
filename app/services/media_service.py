@@ -11,13 +11,13 @@ def get_all_experiments(db: Session) -> List[Dict[str, Any]]:
         for exp in experiments
     ]
 
-def get_experiment_by_id(db: Session, experiment_id: int) -> Dict[str, Any]:
+def get_experiment_by_id(db: Session, experiment_id: str) -> Dict[str, Any]:
     experiment = db.query(Experiment).filter(Experiment.id == experiment_id).first()
     if not experiment:
         return None
     return {"id": experiment.id, "name": experiment.name, "preview_image_url": experiment.preview_image}
 
-def get_experiment_images(db: Session, experiment_id: int) -> List[str]:
+def get_experiment_images(db: Session, experiment_id: str) -> List[str]:
     images = db.query(ExperimentImage).filter(
         ExperimentImage.experiment_id == experiment_id
     ).order_by(ExperimentImage.sort_order).all()
