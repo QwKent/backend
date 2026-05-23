@@ -43,13 +43,6 @@ def init_db():
                 Experiment(id="spring_pendulum", name="Spring pendulum", preview_image="/uploads/spring_pendulum_preview.png"),
             ]
             db.add_all(experiments)
-            db.flush()
-
-            images = [
-                ExperimentImage(experiment_id=experiment.id, image_url=experiment.preview_image, sort_order=1)
-                for experiment in experiments
-            ]
-            db.add_all(images)
             db.commit()
     finally:
         db.close()
