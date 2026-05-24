@@ -13,7 +13,7 @@ from app.services.token_service import generate_media_token, verify_media_token
 from app.middleware.auth import verify_device_auth
 from app.config import settings
 
-router = APIRouter(prefix="/api", dependencies=[Depends(verify_device_auth)])
+router = APIRouter(prefix="/api")
 
 class ExperimentResponse(BaseModel):
     id: str
@@ -56,7 +56,7 @@ async def get_experiment_images(experiment_id: str, db: Session = Depends(get_db
         "image_urls": images
     }
 
-@router.post("/experiment_runs/{run_id}/media")
+@router.post("/experiment_runs/{run_id}/media", dependencies=[Depends(verify_device_auth)])
 async def upload_media(
     run_id: str,
     fileName: str = Form(...),
@@ -90,7 +90,7 @@ async def upload_media(
         created_at=datetime.utcnow()
     )
 
-@router.get("/experiment_runs/{run_id}/media")
+@router.get("/experiment_runs/{run_id}/media", dependencies=[Depends(verify_device_auth)])
 async def get_run_media(run_id: str):
     run_files = []
     run_upload_dir = get_run_upload_dir(run_id)
@@ -112,7 +112,7 @@ async def get_run_media(run_id: str):
     
     return {"run_id": run_id, "media": run_files}
 
-@router.delete("/experiment_runs/{run_id}/media/{media_id}")
+@router.delete("/experiment_runs/{run_id}/media/{media_id}", dependencies=[Depends(verify_device_auth)])
 async def delete_media(run_id: str, media_id: str):
     run_upload_dir = get_run_upload_dir(run_id)
     validate_media_id(media_id)
