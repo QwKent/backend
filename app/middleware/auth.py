@@ -34,7 +34,7 @@ class APIKeyMiddleware(BaseHTTPMiddleware):
         if request.url.path.startswith("/static"):
             return await call_next(request)
 
-        if request.method == "GET" and request.url.path.startswith("/media-temp"):
+        if request.url.path.startswith("/api/media-temp"):
             return await call_next(request)
 
         if request.url.path == "/" or request.url.path == "/health":
