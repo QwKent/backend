@@ -20,7 +20,7 @@ app.add_middleware(APIKeyMiddleware)
 
 init_db()
 
-app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
+app.mount("/static",StaticFiles(directory="uploads/public"),name="static")
 app.include_router(auth_router)
 app.include_router(media_router)
 

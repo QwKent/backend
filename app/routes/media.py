@@ -38,7 +38,7 @@ class MediaTempUrlResponse(BaseModel):
 def get_run_upload_dir(run_id: str) -> str:
     if not run_id or os.path.basename(run_id) != run_id or not media_service.validate_file_path(run_id):
         raise HTTPException(status_code=400, detail="Invalid run ID")
-    return os.path.join(settings.UPLOAD_DIR, run_id)
+    return os.path.join(settings.UPLOAD_DIR,"private","experiment_runs",run_id)
 
 def validate_media_id(media_id: str):
     if not media_id or os.path.basename(media_id) != media_id or not media_service.validate_file_path(media_id):
@@ -131,6 +131,9 @@ async def delete_media(run_id: str, media_id: str):
 
 @router.get("/media-temp")
 async def get_media_temp(path: str, token: str, expires: int):
+    if not path.startswith("private/"):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     if not path or not token or not expires:
         raise HTTPException(status_code=400, detail="Missing parameters")
     
@@ -146,6 +149,9 @@ async def get_media_temp(path: str, token: str, expires: int):
 
 @router.get("/media-temp-url")
 async def get_media_temp_url(path: str) -> MediaTempUrlResponse:
+    if not path.startswith("private/"):
+        raise HTTPException(status_code=403, detail="Access denied")
+    
     safe_path = media_service.get_safe_file_path(path)
     if not safe_path or not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail="File not found")

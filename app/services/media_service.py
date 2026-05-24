@@ -32,4 +32,4 @@ def validate_file_path(filename: str) -> bool:
 def get_safe_file_path(filename: str) -> str:
     if not validate_file_path(filename):
         return None
-    return os.path.join(settings.UPLOAD_DIR, os.path.basename(filename))
+    return os.path.join(settings.UPLOAD_DIR, filename)

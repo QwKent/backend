@@ -15,4 +15,5 @@ class Settings(BaseSettings):
         env_file = ".env"
 
 settings = Settings()
-os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
+os.makedirs("uploads/public", exist_ok=True)
+os.makedirs("uploads/private", exist_ok=True)
