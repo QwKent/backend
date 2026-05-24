@@ -24,6 +24,17 @@ class ExperimentImage(Base):
     image_url = Column(String, nullable=False)
     sort_order = Column(Integer, default=0)
 
+class Device(Base):
+    __tablename__ = "devices"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    device_id = Column(String, unique=True, index=True, nullable=False)
+    device_name = Column(String, nullable=True)
+    token = Column(String, unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    expires_at = Column(DateTime, nullable=False)
+    is_active = Column(Integer, default=1)
+
 def init_db():
     Base.metadata.create_all(bind=engine)
     

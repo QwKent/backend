@@ -3,15 +3,17 @@ from fastapi.responses import FileResponse
 from typing import List
 import os
 import uuid
+import time
 from sqlalchemy.orm import Session
 from datetime import datetime
 from pydantic import BaseModel
 from app.database import get_db
 from app.services import media_service
-from app.middleware.auth import verify_api_key
+from app.services.token_service import generate_media_token, verify_media_token
+from app.middleware.auth import verify_device_auth
 from app.config import settings
 
-router = APIRouter(prefix="/api", dependencies=[Depends(verify_api_key)])
+router = APIRouter(prefix="/api", dependencies=[Depends(verify_device_auth)])
 
 class ExperimentResponse(BaseModel):
     id: str
@@ -29,10 +31,13 @@ class MediaResponse(BaseModel):
     size: int
     created_at: datetime
 
+class MediaTempUrlResponse(BaseModel):
+    url: str
+    expires_in: int
+
 def get_run_upload_dir(run_id: str) -> str:
     if not run_id or os.path.basename(run_id) != run_id or not media_service.validate_file_path(run_id):
         raise HTTPException(status_code=400, detail="Invalid run ID")
-
     return os.path.join(settings.UPLOAD_DIR, run_id)
 
 def validate_media_id(media_id: str):
@@ -80,7 +85,7 @@ async def upload_media(
     return MediaResponse(
         media_id=media_id,
         filename=fileName,
-        url=f"/uploads/{run_id}/{filename}",
+        url=f"/api/media-temp?path={run_id}/{filename}",
         size=file_size,
         created_at=datetime.utcnow()
     )
@@ -100,7 +105,7 @@ async def get_run_media(run_id: str):
             run_files.append({
                 "media_id": filename.split(".")[0],
                 "filename": filename,
-                "url": f"/uploads/{run_id}/{filename}",
+                "url": f"/api/media-temp?path={run_id}/{filename}",
                 "size": stat.st_size,
                 "created_at": datetime.fromtimestamp(stat.st_ctime)
             })
@@ -124,10 +129,33 @@ async def delete_media(run_id: str, media_id: str):
     
     raise HTTPException(status_code=404, detail="Media not found")
 
-@router.get("/files/{filename}")
-async def download_file(filename: str):
-    safe_path = media_service.get_safe_file_path(filename)
+@router.get("/media-temp")
+async def get_media_temp(path: str, token: str, expires: int):
+    if not path or not token or not expires:
+        raise HTTPException(status_code=400, detail="Missing parameters")
+    
+    if not verify_media_token(path, expires, token):
+        raise HTTPException(status_code=403, detail="Invalid or expired media token")
+    
+    safe_path = media_service.get_safe_file_path(path)
     if not safe_path or not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail="File not found")
     
+    filename = os.path.basename(safe_path)
     return FileResponse(safe_path, filename=filename)
+
+@router.get("/media-temp-url")
+async def get_media_temp_url(path: str) -> MediaTempUrlResponse:
+    safe_path = media_service.get_safe_file_path(path)
+    if not safe_path or not os.path.exists(safe_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    expires_at = int(time.time()) + settings.MEDIA_TOKEN_EXPIRE_SECONDS
+    token = generate_media_token(path, expires_at)
+    
+    temp_url = f"/api/media-temp?path={path}&token={token}&expires={expires_at}"
+    
+    return MediaTempUrlResponse(
+        url=temp_url,
+        expires_in=settings.MEDIA_TOKEN_EXPIRE_SECONDS
+    )

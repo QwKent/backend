@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     MAX_FILE_SIZE: int = 100 * 1024 * 1024
     DATABASE_URL: str = "sqlite:///./media.db"
     API_KEY: str = "supersecretapikey123"
+    MEDIA_TOKEN_SECRET: str = "media_token_secret_key"
+    MEDIA_TOKEN_EXPIRE_SECONDS: int = 300
+    DEVICE_TOKEN_EXPIRE_DAYS: int = 30
 
     class Config:
         env_file = ".env"
