@@ -81,11 +81,11 @@ async def upload_media(
     
     with open(file_path, "wb") as buffer:
         buffer.write(content)
-    
+
     return MediaResponse(
         media_id=media_id,
         filename=fileName,
-        url=f"/api/media-temp?path={run_id}/{filename}",
+        url=f"private/experiment_runs/{run_id}/{filename}",
         size=file_size,
         created_at=datetime.utcnow()
     )
@@ -105,7 +105,7 @@ async def get_run_media(run_id: str):
             run_files.append({
                 "media_id": filename.split(".")[0],
                 "filename": filename,
-                "url": f"/api/media-temp?path={run_id}/{filename}",
+                "url": f"private/experiment_runs/{run_id}/{filename}",
                 "size": stat.st_size,
                 "created_at": datetime.fromtimestamp(stat.st_ctime)
             })
@@ -151,7 +151,7 @@ async def get_media_temp(path: str, token: str, expires: int):
 async def get_media_temp_url(path: str) -> MediaTempUrlResponse:
     if not path.startswith("private/"):
         raise HTTPException(status_code=403, detail="Access denied")
-    
+
     safe_path = media_service.get_safe_file_path(path)
     if not safe_path or not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail="File not found")
