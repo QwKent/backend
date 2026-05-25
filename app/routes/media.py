@@ -13,7 +13,7 @@ from app.services.token_service import generate_media_token, verify_media_token
 from app.middleware.auth import verify_device_auth
 from app.config import settings
 
-router = APIRouter(prefix="/api", dependencies=[Depends(verify_device_auth)])
+router = APIRouter(prefix="/api")
 
 class ExperimentResponse(BaseModel):
     id: str
@@ -38,7 +38,7 @@ class MediaTempUrlResponse(BaseModel):
 def get_run_upload_dir(run_id: str) -> str:
     if not run_id or os.path.basename(run_id) != run_id or not media_service.validate_file_path(run_id):
         raise HTTPException(status_code=400, detail="Invalid run ID")
-    return os.path.join(settings.UPLOAD_DIR, run_id)
+    return os.path.join(settings.UPLOAD_DIR,"private","experiment_runs",run_id)
 
 def validate_media_id(media_id: str):
     if not media_id or os.path.basename(media_id) != media_id or not media_service.validate_file_path(media_id):
@@ -56,7 +56,7 @@ async def get_experiment_images(experiment_id: str, db: Session = Depends(get_db
         "image_urls": images
     }
 
-@router.post("/experiment_runs/{run_id}/media")
+@router.post("/experiment_runs/{run_id}/media", dependencies=[Depends(verify_device_auth)])
 async def upload_media(
     run_id: str,
     fileName: str = Form(...),
@@ -81,16 +81,16 @@ async def upload_media(
     
     with open(file_path, "wb") as buffer:
         buffer.write(content)
-    
+
     return MediaResponse(
         media_id=media_id,
         filename=fileName,
-        url=f"/api/media-temp?path={run_id}/{filename}",
+        url=f"private/experiment_runs/{run_id}/{filename}",
         size=file_size,
         created_at=datetime.utcnow()
     )
 
-@router.get("/experiment_runs/{run_id}/media")
+@router.get("/experiment_runs/{run_id}/media", dependencies=[Depends(verify_device_auth)])
 async def get_run_media(run_id: str):
     run_files = []
     run_upload_dir = get_run_upload_dir(run_id)
@@ -105,14 +105,14 @@ async def get_run_media(run_id: str):
             run_files.append({
                 "media_id": filename.split(".")[0],
                 "filename": filename,
-                "url": f"/api/media-temp?path={run_id}/{filename}",
+                "url": f"private/experiment_runs/{run_id}/{filename}",
                 "size": stat.st_size,
                 "created_at": datetime.fromtimestamp(stat.st_ctime)
             })
     
     return {"run_id": run_id, "media": run_files}
 
-@router.delete("/experiment_runs/{run_id}/media/{media_id}")
+@router.delete("/experiment_runs/{run_id}/media/{media_id}", dependencies=[Depends(verify_device_auth)])
 async def delete_media(run_id: str, media_id: str):
     run_upload_dir = get_run_upload_dir(run_id)
     validate_media_id(media_id)
@@ -131,6 +131,9 @@ async def delete_media(run_id: str, media_id: str):
 
 @router.get("/media-temp")
 async def get_media_temp(path: str, token: str, expires: int):
+    if not path.startswith("private/"):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     if not path or not token or not expires:
         raise HTTPException(status_code=400, detail="Missing parameters")
     
@@ -146,6 +149,9 @@ async def get_media_temp(path: str, token: str, expires: int):
 
 @router.get("/media-temp-url")
 async def get_media_temp_url(path: str) -> MediaTempUrlResponse:
+    if not path.startswith("private/"):
+        raise HTTPException(status_code=403, detail="Access denied")
+
     safe_path = media_service.get_safe_file_path(path)
     if not safe_path or not os.path.exists(safe_path):
         raise HTTPException(status_code=404, detail="File not found")

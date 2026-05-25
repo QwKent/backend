@@ -28,25 +28,30 @@ def verify_device_auth(request: Request):
         db.close()
 
 class APIKeyMiddleware(BaseHTTPMiddleware):
+
     async def dispatch(self, request: Request, call_next):
-        if request.method == "GET" and request.url.path.startswith("/media-temp"):
+
+        if request.url.path.startswith("/static"):
             return await call_next(request)
-        
+
+        if request.url.path == "/api/media-temp":
+            return await call_next(request)
+
         if request.url.path == "/" or request.url.path == "/health":
             return await call_next(request)
-        
+
         if request.url.path == "/register-device":
             return await call_next(request)
-        
+
         if request.url.path.startswith("/swagger") or request.url.path.startswith("/redoc"):
             return await call_next(request)
-        
+
         if request.url.path.startswith("/openapi.json"):
             return await call_next(request)
-        
+
         try:
             verify_device_auth(request)
         except HTTPException as exc:
             return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
-        
+
         return await call_next(request)
